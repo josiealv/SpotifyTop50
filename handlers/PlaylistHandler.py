@@ -1,6 +1,6 @@
-from track import Track
-from playlist import Playlist
-import constants
+from models.track import Track
+from models.playlist import Playlist
+import utils.constants as constants
 from dotenv import load_dotenv
 load_dotenv()
 import os

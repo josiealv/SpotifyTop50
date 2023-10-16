@@ -1,4 +1,4 @@
-from client import Client
+from handlers.PlaylistHandler import Client
 
 def main():
     user_id = input ("Please enter user id/username (NOTE: this is different from your display name, this can be found in account ovierview)\n")
