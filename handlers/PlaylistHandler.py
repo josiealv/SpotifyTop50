@@ -1,5 +1,7 @@
+import json
 from models.track import Track
 from models.playlist import Playlist
+from models.removeTrack import RemoveTrack
 import utils.constants as constants
 from dotenv import load_dotenv
 load_dotenv()
@@ -63,13 +65,14 @@ class Client:
     
     def getNewTracks(self, offset, limit):
         user_top_tracks = self.auth_token.current_user_top_tracks(limit, offset, "long_term") ## only gets 50
-        return [Track(track[constants.ID], track[constants.NAME], track[constants.ARTISTS][0][constants.NAME])
+        return [Track(track[constants.ID], track[constants.URI], 
+                    track[constants.NAME], track[constants.ARTISTS][0][constants.NAME])
                  for track in user_top_tracks[constants.ITEMS]]
     
     def getOldTracks (self, playlist):
         user_current_tracks = self.auth_token.user_playlist_tracks(user=self.user_id, playlist_id=playlist.id)
-        return [Track(track[constants.TRACK][constants.ID], track[constants.TRACK][constants.NAME], 
-                      track[constants.TRACK][constants.ARTISTS][0][constants.NAME]) 
+        return [Track(track[constants.TRACK][constants.ID], track[constants.TRACK][constants.URI], 
+                      track[constants.TRACK][constants.NAME], track[constants.TRACK][constants.ARTISTS][0][constants.NAME]) 
                       for track in user_current_tracks[constants.ITEMS]]
 
     def updateTrackList(self, newTracks, top50Playlist):
@@ -87,18 +90,21 @@ class Client:
             if (oldTracks[i].id != newTracks[i].id):
                 oldTrackList = []
                 newTrackList = []
-                print(f"{i+1}. tracks don't match!\n")
-                print(f"{i+1}. current track: {oldTracks[i].name}  id: {oldTracks[i].id} \n")
-                print(f"{i+1}. new track: {newTracks[i].name} \n")
-                oldTrackList.append(oldTracks[i].id)
-                self.auth_token.playlist_remove_all_occurrences_of_items(top50Playlist.id, oldTrackList)
-                print(f"{newTrackList}")
+                print("tracks don't match!\n")
+                print(f"{i+1}. Current track: {oldTracks[i].name} \n")
+                print(f"{i+1}. New track: {newTracks[i].name} \n")
+                oldTrackList.append({
+                    "uri": oldTracks[i].uri,
+                    "positions": [i]
+                 })
+                self.auth_token.playlist_remove_specific_occurrences_of_items(top50Playlist.id, json.loads(json.dumps(oldTrackList)))
                 newTrackList.append(newTracks[i].id)
                 self.auth_token.playlist_add_items(top50Playlist.id, newTrackList, i)
 
         if(currSize<50):
             remainingTrackList = []
             for j in range (currSize, 50):
+                print(f"{j+1}. New track: {newTracks[j].name}")
                 remainingTrackList.append(newTracks[j].id)
             self.auth_token.playlist_add_items(top50Playlist.id, remainingTrackList, currSize)
     

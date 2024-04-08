@@ -5,5 +5,4 @@ def main():
     cli = Client (user_id)
     playlist_url = cli.generateTop50()
     print(f"Playlist url: {playlist_url}\n")
-    
 main()
