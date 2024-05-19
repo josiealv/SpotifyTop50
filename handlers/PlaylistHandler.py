@@ -8,6 +8,7 @@ load_dotenv()
 import os
 import spotipy
 import spotipy.util as util
+from spotipy.exceptions import SpotifyException
 
 SPOTIPY_CLIENT_ID = os.getenv('SPOTIPY_CLIENT_ID')
 SPOTIPY_CLIENT_SECRET = os.getenv('SPOTIPY_CLIENT_SECRET')
@@ -97,9 +98,13 @@ class Client:
                     "uri": oldTracks[i].uri,
                     "positions": [i]
                  })
-                self.auth_token.playlist_remove_specific_occurrences_of_items(top50Playlist.id, json.loads(json.dumps(oldTrackList)))
                 newTrackList.append(newTracks[i].id)
-                self.auth_token.playlist_add_items(top50Playlist.id, newTrackList, i)
+                try:
+                    self.auth_token.playlist_remove_specific_occurrences_of_items(top50Playlist.id, json.loads(json.dumps(oldTrackList)))
+                    self.auth_token.playlist_add_items(top50Playlist.id, newTrackList, i)
+                except(SpotifyException):
+                    self.auth_token.playlist_remove_all_occurrences_of_items(top50Playlist.id, oldTracks[i])
+                    self.auth_token.playlist_add_items(top50Playlist.id, newTrackList)
 
         if(currSize<50):
             remainingTrackList = []
