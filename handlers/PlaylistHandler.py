@@ -78,40 +78,34 @@ class Client:
 
     def updateTrackList(self, newTracks, top50Playlist):
         oldTracks = self.getOldTracks(top50Playlist)
-        currSize = len(oldTracks)
-
-        # This would usually be 50 but users might remove tracks after creation 
-        # so this only updates/removes based on number of tracks (currSize)
-        # and adds whatever is left over from newTracks separately
-        #
-        # Ex: if there are currently 10 tracks in playlist, we check if those 10 tracks' 
-        # rankings changed/have been replaced and update those 10. 
-        # The remaining 40 get added without question
-        for i in range (currSize):
-            if (oldTracks[i].id != newTracks[i].id):
-                oldTrackList = []
-                newTrackList = []
-                print("tracks don't match!\n")
-                print(f"{i+1}. Current track: {oldTracks[i].name} \n")
-                print(f"{i+1}. New track: {newTracks[i].name} \n")
-                oldTrackList.append({
-                    "uri": oldTracks[i].uri,
-                    "positions": [i]
-                 })
-                newTrackList.append(newTracks[i].id)
-                try:
-                    self.auth_token.playlist_remove_specific_occurrences_of_items(top50Playlist.id, json.loads(json.dumps(oldTrackList)))
-                    self.auth_token.playlist_add_items(top50Playlist.id, newTrackList, i)
-                except(SpotifyException):
-                    self.auth_token.playlist_remove_all_occurrences_of_items(top50Playlist.id, oldTracks[i])
-                    self.auth_token.playlist_add_items(top50Playlist.id, newTrackList)
-
-        if(currSize<50):
-            remainingTrackList = []
-            for j in range (currSize, 50):
-                print(f"{j+1}. New track: {newTracks[j].name}")
-                remainingTrackList.append(newTracks[j].id)
-            self.auth_token.playlist_add_items(top50Playlist.id, remainingTrackList, currSize)
+        newTracks = newTracks[:50]  # Ensure exactly 50 tracks
+        
+        # Remove excess tracks if playlist has more than 50
+        if len(oldTracks) > 50:
+            excess_uris = [track.uri for track in oldTracks[50:]]
+            self.auth_token.playlist_remove_all_occurrences_of_items(top50Playlist.id, excess_uris)
+            oldTracks = oldTracks[:50]
+        
+        # Update tracks that changed position or are different
+        tracks_to_remove = []
+        tracks_to_add = []
+        
+        for i in range(min(len(oldTracks), len(newTracks))):
+            if oldTracks[i].id != newTracks[i].id:
+                tracks_to_remove.append({"uri": oldTracks[i].uri, "positions": [i]})
+                tracks_to_add.append((newTracks[i].id, i))
+        
+        # Add new tracks if we need more than current count
+        if len(newTracks) > len(oldTracks):
+            for i in range(len(oldTracks), len(newTracks)):
+                tracks_to_add.append((newTracks[i].id, i))
+        
+        # Apply changes
+        if tracks_to_remove:
+            self.auth_token.playlist_remove_specific_occurrences_of_items(top50Playlist.id, tracks_to_remove)
+        
+        for track_id, position in tracks_to_add:
+            self.auth_token.playlist_add_items(top50Playlist.id, [track_id], position)
     
     def createNewTrackList(self, top50Tracks, top50PlaylistID):
        trackList = []
